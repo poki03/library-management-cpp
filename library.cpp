@@ -111,12 +111,37 @@ public:
     }
 };
 
+// ---------- Console menu ----------
+int readInt(const string& prompt) {
+    cout << prompt; string s; getline(cin, s);
+    try { size_t p; int v = stoi(s, &p); if (p != s.size()) throw 1; return v; }
+    catch (...) { throw LibraryError("'" + s + "' is not a valid number"); }
+}
+string readLine(const string& prompt) { cout << prompt; string s; getline(cin, s); return s; }
+
 int main() {
     cout << "Name: Prasad Wakhare" << endl;
+    const string FILE = "library.csv";
     Library lib;
-    lib.load("library.csv");
-    lib.list();
-    try { lib.add(make_unique<Book>(101, "Let Us C++", "Yashavant Kanetkar")); } catch (const LibraryError& e) { cout << "Note: " << e.what() << "\n"; }
-    lib.save("library.csv");
-    return 0;
+    lib.load(FILE);
+
+    while (true) {
+        cout << "\n[MENU] 1.Add book  2.Add magazine  3.List  4.Search  5.Issue  6.Return  7.Save & Exit\n";
+        int choice;
+        try { choice = readInt("Choice: "); } catch (const LibraryError& e) { cout << "  Error: " << e.what() << "\n"; continue; }
+        try {
+            switch (choice) {
+                case 1: { int id = readInt("ID: "); string t = readLine("Title: "); string a = readLine("Author: ");
+                          lib.add(make_unique<Book>(id, t, a)); cout << "  Book added\n"; break; }
+                case 2: { int id = readInt("ID: "); string t = readLine("Title: "); string p = readLine("Publisher: ");
+                          lib.add(make_unique<Magazine>(id, t, p)); cout << "  Magazine added\n"; break; }
+                case 3: lib.list(); break;
+                case 4: lib.search(readLine("Search word: ")); break;
+                case 5: lib.issue(readInt("ID to issue: ")); break;
+                case 6: lib.giveBack(readInt("ID to return: ")); break;
+                case 7: lib.save(FILE); cout << "Goodbye!\n"; return 0;
+                default: cout << "  Invalid choice\n";
+            }
+        } catch (const LibraryError& e) { cout << "  Error: " << e.what() << "\n"; }
+    }
 }
