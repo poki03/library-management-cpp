@@ -85,18 +85,38 @@ public:
     void issue(int id)  { auto& it = find(id); it.issue();    cout << "  Issued '" << it.getTitle() << "' for " << it.loanDays() << " days\n"; }
     void giveBack(int id) { auto& it = find(id); it.giveBack(); cout << "  Returned '" << it.getTitle() << "'\n"; }
 
+    void save(const string& file) const {
+        ofstream out(file);
+        if (!out) throw LibraryError("Cannot open " + file + " for writing");
+        for (const auto& [id, it] : items) out << it->toCsv() << "\n";
+        cout << "  Saved " << items.size() << " records to " << file << "\n";
+    }
+    void load(const string& file) {
+        ifstream in(file);
+        if (!in) { cout << "  No saved data (" << file << ") - starting with an empty library\n"; return; }
+        string line; int n = 0, bad = 0;
+        while (getline(in, line)) {
+            stringstream ss(line);
+            string type, id, title, who, av;
+            if (!getline(ss, type, ',') || !getline(ss, id, ',') || !getline(ss, title, ',') ||
+                !getline(ss, who, ',') || !getline(ss, av)) { ++bad; continue; }
+            try {
+                if (type == "Book") add(make_unique<Book>(stoi(id), title, who, av == "1"));
+                else if (type == "Magazine") add(make_unique<Magazine>(stoi(id), title, who, av == "1"));
+                else { ++bad; continue; }
+                ++n;
+            } catch (const exception&) { ++bad; }
+        }
+        cout << "  Loaded " << n << " records from " << file << (bad ? " (" + to_string(bad) + " bad lines skipped)" : "") << "\n";
+    }
 };
 
 int main() {
     cout << "Name: Prasad Wakhare" << endl;
     Library lib;
-    lib.add(make_unique<Book>(101, "Let Us C++", "Yashavant Kanetkar"));
-    lib.add(make_unique<Magazine>(201, "Digit Magazine", "9.9 Group"));
+    lib.load("library.csv");
     lib.list();
-    lib.search("C++");
-    lib.issue(101);
-    try { lib.issue(101); } catch (const LibraryError& e) { cout << "Error: " << e.what() << "\n"; }
-    try { lib.issue(999); } catch (const LibraryError& e) { cout << "Error: " << e.what() << "\n"; }
-    lib.giveBack(101);
+    try { lib.add(make_unique<Book>(101, "Let Us C++", "Yashavant Kanetkar")); } catch (const LibraryError& e) { cout << "Note: " << e.what() << "\n"; }
+    lib.save("library.csv");
     return 0;
 }
