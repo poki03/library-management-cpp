@@ -54,11 +54,49 @@ public:
     int loanDays() const override { return 7; }
 };
 
+// ---------- Library (STL map keeps records in memory) ----------
+class Library {
+    map<int, unique_ptr<LibraryItem>> items;
+    LibraryItem& find(int id) {
+        auto it = items.find(id);
+        if (it == items.end()) throw ItemNotFound(id);
+        return *it->second;
+    }
+public:
+    void add(unique_ptr<LibraryItem> item) {
+        int id = item->getId();
+        if (items.count(id)) throw LibraryError("ID " + to_string(id) + " already exists");
+        items[id] = move(item);
+    }
+    void list() const {
+        cout << left << setw(5) << "ID" << setw(11) << "Type" << setw(32) << "Title" << setw(20) << "Author/Publisher" << "Status\n";
+        for (const auto& [id, it] : items)
+            cout << setw(5) << id << setw(11) << it->type() << setw(32) << it->getTitle() << setw(20) << it->creator()
+                 << (it->isAvailable() ? "Available" : "Issued") << "\n";
+    }
+    void search(const string& word) const {
+        bool any = false;
+        for (const auto& [id, it] : items)
+            if (it->getTitle().find(word) != string::npos) {
+                cout << "  Found: [" << id << "] " << it->getTitle() << " (" << it->type() << ")\n"; any = true;
+            }
+        if (!any) cout << "  No title contains \"" << word << "\"\n";
+    }
+    void issue(int id)  { auto& it = find(id); it.issue();    cout << "  Issued '" << it.getTitle() << "' for " << it.loanDays() << " days\n"; }
+    void giveBack(int id) { auto& it = find(id); it.giveBack(); cout << "  Returned '" << it.getTitle() << "'\n"; }
+
+};
+
 int main() {
     cout << "Name: Prasad Wakhare" << endl;
-    Book b(101, "Let Us C++", "Yashavant Kanetkar");
-    cout << b.toCsv() << "\n";
-    b.issue();
-    try { b.issue(); } catch (const LibraryError& e) { cout << "Error: " << e.what() << "\n"; }
+    Library lib;
+    lib.add(make_unique<Book>(101, "Let Us C++", "Yashavant Kanetkar"));
+    lib.add(make_unique<Magazine>(201, "Digit Magazine", "9.9 Group"));
+    lib.list();
+    lib.search("C++");
+    lib.issue(101);
+    try { lib.issue(101); } catch (const LibraryError& e) { cout << "Error: " << e.what() << "\n"; }
+    try { lib.issue(999); } catch (const LibraryError& e) { cout << "Error: " << e.what() << "\n"; }
+    lib.giveBack(101);
     return 0;
 }
